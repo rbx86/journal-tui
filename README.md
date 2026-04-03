@@ -9,6 +9,6 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc #if you're using zsh, ot
 source ~/.zshrc
 ```
 
-Type `journal` to start using it :).
+Type `journal` to start using it :). Entries saved in `~/.journaltui/entries/`.
 
-Entries saved in `~/.journaltui/entries/`.
+Requires Go and is only compatible on Linux.
