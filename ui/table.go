@@ -251,8 +251,6 @@ func formatRelativeTime(timestamp string) string {
 	}
 }
 
-// parseDateQuery takes a natural language date string and returns
-// matching day, month, year as ints. -1 means not specified.
 func parseDateQuery(query string) (day, month, year int) {
 	day, month, year = -1, -1, -1
 	query = strings.TrimSpace(strings.ToLower(query))
@@ -275,7 +273,6 @@ func parseDateQuery(query string) (day, month, year int) {
 		"december": 12, "dec": 12,
 	}
 
-	// Try dd-mm-yyyy format first
 	parts := strings.Split(query, "-")
 	if len(parts) == 3 {
 		d, err1 := strconv.Atoi(parts[0])
@@ -286,22 +283,18 @@ func parseDateQuery(query string) (day, month, year int) {
 		}
 	}
 
-	// Split by space and try to identify tokens
 	tokens := strings.Fields(query)
 	for _, token := range tokens {
-		// Try as year (4 digits)
 		if len(token) == 4 {
 			if y, err := strconv.Atoi(token); err == nil {
 				year = y
 				continue
 			}
 		}
-		// Try as day (1-2 digits)
 		if n, err := strconv.Atoi(token); err == nil {
 			day = n
 			continue
 		}
-		// Try as month name
 		if m, ok := monthNames[token]; ok {
 			month = m
 			continue
@@ -311,20 +304,16 @@ func parseDateQuery(query string) (day, month, year int) {
 	return
 }
 
-// entryMatchesFilters returns true if the entry matches the title and date query
 func entryMatchesFilters(entry app.EntryMeta, titleQuery, dateQuery string) bool {
-	// Title filter
 	if titleQuery != "" {
 		if !strings.Contains(strings.ToLower(entry.Title), strings.ToLower(titleQuery)) {
 			return false
 		}
 	}
 
-	// Date filter
 	if dateQuery != "" {
 		filterDay, filterMonth, filterYear := parseDateQuery(dateQuery)
 
-		// Parse entry date — stored as dd-mm-yyyy
 		parts := strings.Split(entry.Date, "-")
 		if len(parts) != 3 {
 			return false

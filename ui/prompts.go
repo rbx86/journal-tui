@@ -314,7 +314,6 @@ func ShowExportProgress(state *app.AppState, statusText *tview.TextView) {
 
 	updateProgress := func(percent int) {
 		state.TviewApp.QueueUpdateDraw(func() {
-			// Build rainbow bar
 			barWidth := 38
 			filled := int(float64(percent) / 100.0 * float64(barWidth))
 			bar := ""
@@ -331,7 +330,6 @@ func ShowExportProgress(state *app.AppState, statusText *tview.TextView) {
 		})
 	}
 
-	// Run export in a goroutine so the UI doesn't block
 	go func() {
 		err := storage.ExportEntries(updateProgress)
 
@@ -344,7 +342,6 @@ func ShowExportProgress(state *app.AppState, statusText *tview.TextView) {
 			}
 		})
 
-		// Clear the status text after 8 seconds
 		go func() {
 			time.Sleep(8 * time.Second)
 			state.TviewApp.QueueUpdateDraw(func() {

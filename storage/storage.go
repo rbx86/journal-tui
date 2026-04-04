@@ -163,10 +163,9 @@ func ExportEntries(progressCallback func(percent int)) error {
 
 		percent := int(float64(i+1) / float64(total) * 100)
 		progressCallback(percent)
-		time.Sleep(50 * time.Millisecond) // give tview time to render each frame
+		time.Sleep(50 * time.Millisecond)
 	}
 
-	// Hold at 100% briefly so user sees the completed bar
 	time.Sleep(500 * time.Millisecond)
 
 	return nil
