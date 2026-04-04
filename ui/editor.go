@@ -20,9 +20,11 @@ func SetupEditor(state *app.AppState) {
 
 	updateHint := func() {
 		if state.IsReadMode {
-			hint.SetText("[yellow]ctrl+e[white] edit  [yellow]esc[white] back")
+			// hint.SetText("[yellow]ctrl+e[white] edit  [yellow]esc[white] back")
+			hint.SetText("[#1DB954]ctrl+s[white] save  [#1DB954]esc[white] back")
 		} else {
-			hint.SetText("[yellow]ctrl+s[white] save  [yellow]esc[white] back")
+			// hint.SetText("[yellow]ctrl+s[white] save  [yellow]esc[white] back")
+			hint.SetText("[#1DB954]ctrl+s[white] save  [#1DB954]esc[white] back")
 		}
 	}
 
@@ -36,7 +38,8 @@ func SetupEditor(state *app.AppState) {
 
 	editorBox := tview.NewFlex().SetDirection(tview.FlexRow)
 	editorBox.SetBorder(true).
-		SetTitleAlign(tview.AlignLeft)
+		SetTitleAlign(tview.AlignCenter).
+		SetBorderPadding(1, 0, 2, 2)
 
 	editorBox.
 		AddItem(textArea, 0, 1, true).
@@ -114,13 +117,13 @@ func OpenEditor(state *app.AppState, entryID string, readMode bool) {
 	editorBox := state.EditorBox
 
 	if entryID == "" {
-		// New entry
 		state.IsNewEntry = true
 		textArea.SetText("", true)
 		textArea.SetDisabled(false)
-		editorBox.SetTitle(" New Entry [editing] ")
+		now := time.Now()
+		editorBox.SetTitle(fmt.Sprintf(" New Entry (%s) ", now.Format("02-01-2006"))).
+			SetTitleAlign(tview.AlignCenter)
 	} else {
-		// Existing entry
 		state.IsNewEntry = false
 		content, err := storage.LoadEntry(entryID)
 		if err != nil {

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"journaltui/app"
 
 	"github.com/gdamore/tcell/v2"
@@ -8,13 +9,40 @@ import (
 )
 
 func ShowTitlePrompt(state *app.AppState, onConfirm func(title string), onCancel func()) {
+	counter := tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignRight).
+		SetText("[#1DB954]0/30")
+
 	input := tview.NewInputField().
 		SetLabel("Entry title: ").
-		SetFieldWidth(40)
+		SetFieldWidth(30).
+		SetLabelColor(ColorAccent).
+		SetFieldTextColor(ColorText)
 
-	input.SetBorder(true).
+	input.SetAcceptanceFunc(func(text string, lastChar rune) bool {
+		return len([]rune(text)) <= 30
+	})
+
+	input.SetChangedFunc(func(text string) {
+		count := len([]rune(text))
+		if count >= 30 {
+			counter.SetText("[red]30/30")
+		} else {
+			counter.SetText(fmt.Sprintf("[#1DB954]%d/30", count))
+		}
+	})
+
+	inputRow := tview.NewFlex().SetDirection(tview.FlexColumn).
+		AddItem(input, 0, 1, true).
+		AddItem(counter, 6, 0, false)
+
+	box := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(inputRow, 1, 0, true)
+
+	box.SetBorder(true).
 		SetTitle(" Title ").
-		SetTitleAlign(tview.AlignLeft)
+		SetTitleAlign(tview.AlignCenter)
 
 	input.SetDoneFunc(func(key tcell.Key) {
 		switch key {
@@ -39,7 +67,7 @@ func ShowTitlePrompt(state *app.AppState, onConfirm func(title string), onCancel
 		AddItem(
 			tview.NewFlex().SetDirection(tview.FlexRow).
 				AddItem(nil, 0, 1, false).
-				AddItem(input, 5, 0, true).
+				AddItem(box, 3, 0, true).
 				AddItem(nil, 0, 1, false),
 			50, 0, true,
 		).

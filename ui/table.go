@@ -14,7 +14,10 @@ import (
 func SetupTable(state *app.AppState) {
 	table := tview.NewTable().
 		SetBorders(false).
-		SetSelectable(true, false)
+		SetSelectable(true, false).
+		SetSelectedStyle(tcell.StyleDefault.
+			Background(ColorAccent).
+			Foreground(tcell.ColorWhite))
 
 	hint := tview.NewTextView().
 		SetDynamicColors(true).
@@ -24,7 +27,7 @@ func SetupTable(state *app.AppState) {
 	tableBox := tview.NewFlex().SetDirection(tview.FlexRow)
 	tableBox.SetBorder(true).
 		SetTitle(" Entries ").
-		SetTitleAlign(tview.AlignLeft)
+		SetTitleAlign(tview.AlignCenter)
 
 	tableBox.
 		AddItem(table, 0, 1, true).
@@ -44,10 +47,11 @@ func SetupTable(state *app.AppState) {
 	populateTable := func() {
 		table.Clear()
 
-		headers := []string{"ID", "Title", "Date", "Last Edited"}
+		headers := []string{"Title", "Date", "Last Edited"}
 		for col, h := range headers {
 			cell := tview.NewTableCell(h).
-				SetTextColor(tcell.ColorTeal).
+				// SetTextColor(tcell.ColorTeal).
+				SetTextColor(ColorAccent).
 				SetSelectable(false).
 				SetExpansion(1)
 			table.SetCell(0, col, cell)
@@ -55,15 +59,14 @@ func SetupTable(state *app.AppState) {
 
 		row := 1
 		for id, entry := range state.Entries {
-			idCell := tview.NewTableCell(id).SetExpansion(1)
-			titleCell := tview.NewTableCell(entry.Title).SetExpansion(1)
+			// titleCell := tview.NewTableCell(entry.Title).SetExpansion(1)
+			titleCell := tview.NewTableCell(entry.Title).SetExpansion(1).SetReference(id)
 			dateCell := tview.NewTableCell(entry.Date).SetExpansion(1)
 			lastEditedCell := tview.NewTableCell(formatRelativeTime(entry.LastEdited)).SetExpansion(1)
 
-			table.SetCell(row, 0, idCell)
-			table.SetCell(row, 1, titleCell)
-			table.SetCell(row, 2, dateCell)
-			table.SetCell(row, 3, lastEditedCell)
+			table.SetCell(row, 0, titleCell)
+			table.SetCell(row, 1, dateCell)
+			table.SetCell(row, 2, lastEditedCell)
 			row++
 		}
 
@@ -77,7 +80,8 @@ func SetupTable(state *app.AppState) {
 			if row == 0 {
 				return nil
 			}
-			entryID := table.GetCell(row, 0).Text
+			// entryID := table.GetCell(row, 0).Text
+			entryID := table.GetCell(row, 0).GetReference().(string)
 			closeTable(state)
 			OpenEditor(state, entryID, true)
 			return nil
@@ -93,7 +97,8 @@ func SetupTable(state *app.AppState) {
 			if row == 0 {
 				return nil
 			}
-			entryID := table.GetCell(row, 0).Text
+			// entryID := table.GetCell(row, 0).Text
+			entryID := table.GetCell(row, 0).GetReference().(string)
 			showRenamePrompt(state, entryID, table, populateTable)
 			return nil
 
@@ -102,7 +107,8 @@ func SetupTable(state *app.AppState) {
 			if row == 0 {
 				return nil
 			}
-			entryID := table.GetCell(row, 0).Text
+			// entryID := table.GetCell(row, 0).Text
+			entryID := table.GetCell(row, 0).GetReference().(string)
 			ShowDeleteConfirm(state,
 				func() {
 					deleteEntry(state, entryID)
