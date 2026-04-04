@@ -3,6 +3,8 @@ package ui
 import (
 	"fmt"
 	"journaltui/app"
+	"journaltui/storage"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -181,4 +183,173 @@ func ShowUnsavedConfirm(state *app.AppState, onConfirm func(), onCancel func()) 
 
 	state.Pages.AddPage("unsaved_confirm", modal, true, true)
 	state.TviewApp.SetFocus(box)
+}
+
+func ShowSearchPrompt(state *app.AppState, onSearch func(titleQuery, dateQuery string), onCancel func()) {
+	titleInput := tview.NewInputField().
+		SetLabel("Title:  ").
+		SetFieldWidth(30).
+		SetLabelColor(ColorAccent).
+		SetFieldTextColor(ColorText)
+
+	dateInput := tview.NewInputField().
+		SetLabel("Date:   ").
+		SetFieldWidth(30).
+		SetLabelColor(ColorAccent).
+		SetFieldTextColor(ColorText)
+
+	titleInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			state.TviewApp.SetFocus(dateInput)
+			return nil
+		}
+		if event.Key() == tcell.KeyEnter {
+			state.Pages.RemovePage("search_prompt")
+			onSearch(titleInput.GetText(), dateInput.GetText())
+			return nil
+		}
+		if event.Key() == tcell.KeyEscape {
+			state.Pages.RemovePage("search_prompt")
+			onCancel()
+			return nil
+		}
+		return event
+	})
+
+	dateInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			state.TviewApp.SetFocus(titleInput)
+			return nil
+		}
+		if event.Key() == tcell.KeyEnter {
+			state.Pages.RemovePage("search_prompt")
+			onSearch(titleInput.GetText(), dateInput.GetText())
+			return nil
+		}
+		if event.Key() == tcell.KeyEscape {
+			state.Pages.RemovePage("search_prompt")
+			onCancel()
+			return nil
+		}
+		return event
+	})
+
+	hint := tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignCenter).
+		SetText("[#1DB954]tab[white] switch fields  [#1DB954]enter[white] search  [#1DB954]esc[white] cancel")
+
+	box := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(titleInput, 1, 0, true).
+		AddItem(tview.NewBox(), 1, 0, false).
+		AddItem(dateInput, 1, 0, false).
+		AddItem(tview.NewBox(), 1, 0, false).
+		AddItem(hint, 1, 0, false)
+
+	box.SetBorder(true).
+		SetTitle(" Search ").
+		SetTitleAlign(tview.AlignCenter)
+
+	modal := tview.NewFlex().
+		SetDirection(tview.FlexColumn).
+		AddItem(nil, 0, 1, false).
+		AddItem(
+			tview.NewFlex().SetDirection(tview.FlexRow).
+				AddItem(nil, 0, 1, false).
+				AddItem(box, 7, 0, true).
+				AddItem(nil, 0, 1, false),
+			60, 0, true,
+		).
+		AddItem(nil, 0, 1, false)
+
+	state.Pages.AddPage("search_prompt", modal, true, true)
+	state.TviewApp.SetFocus(titleInput)
+}
+
+func ShowExportProgress(state *app.AppState, statusText *tview.TextView) {
+	rainbowColors := []string{
+		"[#FF0000]", // red
+		"[#FF7700]", // orange
+		"[#FFFF00]", // yellow
+		"[#00FF00]", // green
+		"[#0000FF]", // blue
+		"[#4B0082]", // indigo
+		"[#8B00FF]", // violet
+	}
+
+	progressBar := tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignLeft)
+
+	percentText := tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignRight)
+
+	progressRow := tview.NewFlex().SetDirection(tview.FlexColumn).
+		AddItem(progressBar, 0, 1, false).
+		AddItem(percentText, 6, 0, false)
+
+	box := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(tview.NewBox(), 1, 0, false).
+		AddItem(progressRow, 1, 0, false).
+		AddItem(tview.NewBox(), 1, 0, false)
+
+	box.SetBorder(true).
+		SetTitle(" Exporting ").
+		SetTitleAlign(tview.AlignCenter)
+
+	modal := tview.NewFlex().
+		SetDirection(tview.FlexColumn).
+		AddItem(nil, 0, 1, false).
+		AddItem(
+			tview.NewFlex().SetDirection(tview.FlexRow).
+				AddItem(nil, 0, 1, false).
+				AddItem(box, 5, 0, false).
+				AddItem(nil, 0, 1, false),
+			50, 0, false,
+		).
+		AddItem(nil, 0, 1, false)
+
+	state.Pages.AddPage("export_progress", modal, true, true)
+
+	updateProgress := func(percent int) {
+		state.TviewApp.QueueUpdateDraw(func() {
+			// Build rainbow bar
+			barWidth := 38
+			filled := int(float64(percent) / 100.0 * float64(barWidth))
+			bar := ""
+			for i := 0; i < filled; i++ {
+				colorIdx := i % len(rainbowColors)
+				bar += rainbowColors[colorIdx] + "█"
+			}
+			bar += "[#333333]"
+			for i := filled; i < barWidth; i++ {
+				bar += "░"
+			}
+			progressBar.SetText(bar)
+			percentText.SetText(fmt.Sprintf("[white]%3d%%", percent))
+		})
+	}
+
+	// Run export in a goroutine so the UI doesn't block
+	go func() {
+		err := storage.ExportEntries(updateProgress)
+
+		state.TviewApp.QueueUpdateDraw(func() {
+			state.Pages.RemovePage("export_progress")
+			if err != nil {
+				statusText.SetText("[red]Export failed.")
+			} else {
+				statusText.SetText("[#1DB954]Exported entries to ~/Downloads")
+			}
+		})
+
+		// Clear the status text after 8 seconds
+		go func() {
+			time.Sleep(8 * time.Second)
+			state.TviewApp.QueueUpdateDraw(func() {
+				statusText.SetText("")
+			})
+		}()
+	}()
 }

@@ -20,23 +20,19 @@ func SetupEditor(state *app.AppState) {
 
 	updateHint := func() {
 		if state.IsReadMode {
-			// hint.SetText("[yellow]ctrl+e[white] edit  [yellow]esc[white] back")
-			hint.SetText("[#1DB954]ctrl+s[white] save  [#1DB954]esc[white] back")
+			hint.SetText("[yellow]ctrl+e[#ffffe0] edit  [yellow]esc[#ffffe0] back")
 		} else {
-			// hint.SetText("[yellow]ctrl+s[white] save  [yellow]esc[white] back")
-			hint.SetText("[#1DB954]ctrl+s[white] save  [#1DB954]esc[white] back")
+			hint.SetText("[yellow]ctrl+s[#ffffe0] save  [yellow]esc[#ffffe0] back")
 		}
 	}
 
-	updateBorderTitle := func(editorBox *tview.Flex, title string) {
-		if state.IsReadMode {
-			editorBox.SetTitle(fmt.Sprintf(" %s [read] ", title))
-		} else {
-			editorBox.SetTitle(fmt.Sprintf(" %s [editing] ", title))
-		}
+	var editorBox *tview.Flex
+
+	updateBorderTitle := func(box *tview.Flex, title string) {
+		updateTitle(state, box, title, !state.IsDirty)
 	}
 
-	editorBox := tview.NewFlex().SetDirection(tview.FlexRow)
+	editorBox = tview.NewFlex().SetDirection(tview.FlexRow)
 	editorBox.SetBorder(true).
 		SetTitleAlign(tview.AlignCenter).
 		SetBorderPadding(1, 0, 2, 2)
@@ -93,8 +89,15 @@ func SetupEditor(state *app.AppState) {
 		}
 
 		if !state.IsReadMode {
-			state.IsDirty = true
-			updateHint()
+			switch event.Key() {
+			case tcell.KeyUp, tcell.KeyDown, tcell.KeyLeft, tcell.KeyRight,
+				tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd,
+				tcell.KeyCtrlA, tcell.KeyCtrlE:
+			default:
+				state.IsDirty = true
+				updateTitle(state, editorBox, getEditorTitle(state), false)
+				updateHint()
+			}
 		}
 
 		return event
@@ -121,8 +124,8 @@ func OpenEditor(state *app.AppState, entryID string, readMode bool) {
 		textArea.SetText("", true)
 		textArea.SetDisabled(false)
 		now := time.Now()
-		editorBox.SetTitle(fmt.Sprintf(" New Entry (%s) ", now.Format("02-01-2006"))).
-			SetTitleAlign(tview.AlignCenter)
+		editorBox.SetTitle(fmt.Sprintf(" New Entry (%s) [#1DB954][✦][-] ", now.Format("02-01-2006")))
+		editorBox.SetTitleAlign(tview.AlignCenter)
 	} else {
 		state.IsNewEntry = false
 		content, err := storage.LoadEntry(entryID)
@@ -132,11 +135,7 @@ func OpenEditor(state *app.AppState, entryID string, readMode bool) {
 		textArea.SetText(content, true)
 		textArea.SetDisabled(readMode)
 		title := getEditorTitle(state)
-		if readMode {
-			editorBox.SetTitle(fmt.Sprintf(" %s [read] ", title))
-		} else {
-			editorBox.SetTitle(fmt.Sprintf(" %s [editing] ", title))
-		}
+		updateTitle(state, editorBox, title, true)
 	}
 
 	state.UpdateEditorHint()
@@ -156,13 +155,13 @@ func handleSave(state *app.AppState, textArea *tview.TextArea, editorBox *tview.
 				saveEntry(state, entryID, title, content)
 				state.IsNewEntry = false
 				state.IsDirty = false
-				updateBorderTitle(editorBox, title)
+				updateTitle(state, editorBox, title, true)
 			},
 			func() {
 				saveEntry(state, entryID, "Untitled", content)
 				state.IsNewEntry = false
 				state.IsDirty = false
-				updateBorderTitle(editorBox, "Untitled")
+				updateTitle(state, editorBox, "Untitled", true)
 			},
 		)
 	} else {
@@ -177,6 +176,7 @@ func handleSave(state *app.AppState, textArea *tview.TextArea, editorBox *tview.
 			return
 		}
 		state.IsDirty = false
+		updateTitle(state, editorBox, getEditorTitle(state), true)
 	}
 }
 
@@ -216,4 +216,13 @@ func getEditorTitle(state *app.AppState) string {
 		return entry.Title
 	}
 	return "Untitled"
+}
+
+func updateTitle(state *app.AppState, editorBox *tview.Flex, title string, saved bool) {
+	indicator := "[#1DB954][✦][-]"
+	if !saved {
+		indicator = "[red][✦][-]"
+	}
+	editorBox.SetTitle(fmt.Sprintf(" %s %s ", title, indicator))
+	editorBox.SetTitleAlign(tview.AlignCenter)
 }

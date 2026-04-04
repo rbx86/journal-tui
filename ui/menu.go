@@ -12,6 +12,7 @@ func SetupMainMenu(state *app.AppState) {
 	menu := tview.NewList().
 		AddItem("New Entry", "", 0, nil).
 		AddItem("Read / Edit Entries", "", 0, nil).
+		AddItem("Export Entries", "", 0, nil).
 		AddItem("Quit", "", 0, nil)
 
 	menu.SetBorder(false)
@@ -23,10 +24,15 @@ func SetupMainMenu(state *app.AppState) {
 	menu.SetSelectedBackgroundColor(ColorAccent)
 	menu.SetShortcutColor(ColorAccent)
 
+	statusText := tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignCenter).
+		SetText("")
+	statusText.SetBackgroundColor(ColorBackground)
+
 	menu.SetSelectedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
 		switch index {
 		case 0:
-			// OpenEditor(state, "", false)
 			existingID := findTodaysEntry(state)
 			if existingID != "" {
 				OpenEditor(state, existingID, false)
@@ -36,6 +42,8 @@ func SetupMainMenu(state *app.AppState) {
 		case 1:
 			OpenTable(state)
 		case 2:
+			ShowExportProgress(state, statusText)
+		case 3:
 			state.TviewApp.Stop()
 		}
 	})
@@ -58,6 +66,7 @@ func SetupMainMenu(state *app.AppState) {
     / / /_/ / /_/ / /  / / / / /_/ / / / / / /_/ // /   
  __/ /\____/\__,_/_/  /_/ /_/\__,_/_/ /_/  \____/___/   
 /___/                                                   `
+
 	title := tview.NewTextView().
 		SetText(asciiArt).
 		SetTextAlign(tview.AlignCenter).
@@ -66,14 +75,6 @@ func SetupMainMenu(state *app.AppState) {
 	title.SetBackgroundColor(ColorBackground)
 	root.AddItem(title, 6, 0, false)
 
-	// title := tview.NewTextView().
-	// 	SetText("JournalTUI").
-	// 	SetTextAlign(tview.AlignCenter).
-	// 	SetDynamicColors(false)
-	// title.SetTextColor(ColorAccent)
-	// title.SetBackgroundColor(ColorBackground)
-	// root.AddItem(title, 1, 0, false)
-
 	root.AddItem(tview.NewBox().SetBackgroundColor(ColorBackground), 1, 0, false)
 
 	hFlex := tview.NewFlex().SetDirection(tview.FlexColumn)
@@ -81,9 +82,10 @@ func SetupMainMenu(state *app.AppState) {
 	hFlex.AddItem(tview.NewBox().SetBackgroundColor(ColorBackground), 0, 1, false)
 	hFlex.AddItem(menu, 30, 0, true)
 	hFlex.AddItem(tview.NewBox().SetBackgroundColor(ColorBackground), 0, 1, false)
+	root.AddItem(hFlex, 10, 0, true)
 
-	root.AddItem(hFlex, 8, 0, true)
-
+	root.AddItem(tview.NewBox().SetBackgroundColor(ColorBackground), 1, 0, false)
+	root.AddItem(statusText, 1, 0, false)
 	root.AddItem(tview.NewBox().SetBackgroundColor(ColorBackground), 0, 1, false)
 
 	state.Pages.AddPage("main_menu", root, true, true)
